@@ -1095,7 +1095,6 @@
             추적 중인 선박이 없습니다. 상단의 선박 추가 버튼으로 등록하세요.
           </div>
         `;
-        syncWatchlist();
         return;
       }
 
@@ -1295,7 +1294,6 @@
         `;
       }).join("");
 
-      syncWatchlist();
     }
 
     document.getElementById("openAdd").addEventListener("click", () => {
@@ -1395,6 +1393,7 @@
       saveExtraShips(next);
       modal.style.display = "none";
       render();
+      syncWatchlist(true);
     };
 
     saveBtn.addEventListener("click", saveCurrentShip);
@@ -1537,6 +1536,7 @@
         const next = loadExtraShips().filter(item => item.id !== deleteId);
         saveExtraShips(next);
         render();
+        syncWatchlist(true);
       }
     });
 
@@ -1546,7 +1546,7 @@
     });
 
     document.getElementById("openAdd").addEventListener("click", () => {
-      syncWatchlist();
+      // 모달만 열고 AIS 연결은 변경하지 않습니다.
     });
 
     const bootstrapLive = async () => {
