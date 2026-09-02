@@ -1,8 +1,10 @@
 services:
   - type: web
     name: vessel-finder
-    env: node
+    runtime: node
+    region: singapore
     plan: free
     buildCommand: npm install
     startCommand: npm start
-    autoDeploy: false
+    healthCheckPath: /api/health
+    autoDeployTrigger: commit
