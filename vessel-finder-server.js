@@ -191,7 +191,31 @@ function handleMessage(msg) {
 
 function connectStream() {
   closeSocket();
-  if (!config.apiKey || trackedMmsi().length === 0) {
+
+  const mmsiList = trackedMmsi();
+
+  console.log(
+    "[AIS] connectStream called",
+    JSON.stringify({
+      hasApiKey: Boolean(config.apiKey),
+      mmsiCount: mmsiList.length,
+      mmsiList
+    })
+  );
+
+  if (!config.apiKey) {
+    console.log("[AIS] No API key. Waiting.");
+    liveState.enabled = false;
+    liveState.connected = false;
+    broadcast();
+    return;
+  }
+
+  if (mmsiList.length === 0) {
+    console.log("[AIS] No tracked MMSI. Waiting.");
+    liveState.enabled = true;
+    liveState.connected = false;
+    liveState.lastError = "";
     broadcast();
     return;
   }
@@ -201,46 +225,117 @@ function connectStream() {
   liveState.lastError = "";
   broadcast();
 
+  console.log("[AIS] Connecting to AISStream...");
+
   try {
     ws = new WebSocket("wss://stream.aisstream.io/v0/stream", {
       perMessageDeflate: true
     });
-    ws.onopen = () => {
+
+    ws.on("open", () => {
+      console.log("[AIS] WebSocket OPEN");
+
       reconnectDelay = 1000;
-      ws.send(JSON.stringify(buildSubscription()));
-    };
-    ws.onmessage = (event) => {
-      let raw = event.data;
-      if (raw instanceof ArrayBuffer) {
-        raw = Buffer.from(raw).toString("utf8");
-      } else if (ArrayBuffer.isView(raw)) {
-        raw = Buffer.from(raw.buffer).toString("utf8");
-      } else if (Buffer.isBuffer(raw)) {
-        raw = raw.toString("utf8");
-      } else if (typeof raw !== "string") {
-        raw = String(raw);
+
+      const subscription = buildSubscription();
+
+      console.log(
+        "[AIS] Sending subscription",
+        JSON.stringify({
+          boundingBoxes: subscription.BoundingBoxes,
+          filtersShipMMSI: subscription.FiltersShipMMSI,
+          filterMessageTypes: subscription.FilterMessageTypes
+        })
+      );
+
+      ws.send(JSON.stringify(subscription));
+    });
+
+    ws.on("message", (data) => {
+      try {
+        let raw;
+
+        if (Buffer.isBuffer(data)) {
+          raw = data.toString("utf8");
+        } else if (ArrayBuffer.isView(data)) {
+          raw = Buffer.from(
+            data.buffer,
+            data.byteOffset,
+            data.byteLength
+          ).toString("utf8");
+        } else if (typeof data === "string") {
+          raw = data;
+        } else {
+          raw = String(data);
+        }
+
+        console.log("[AIS] Message received, bytes:", raw.length);
+
+        const parsed = JSON.parse(raw);
+
+        console.log(
+          "[AIS] MessageType:",
+          parsed?.MessageType || "unknown"
+        );
+
+        handleMessage(parsed);
+      } catch (err) {
+        console.error(
+          "[AIS] Message parse error:",
+          err?.message || err
+        );
+      }
+    });
+
+    ws.on("error", (err) => {
+      console.error(
+        "[AIS] WebSocket ERROR:",
+        err?.message || err
+      );
+
+      liveState.connected = false;
+      liveState.lastError =
+        `AISStream WebSocket error: ${err?.message || "unknown error"}`;
+
+      broadcast();
+    });
+
+    ws.on("close", (code, reason) => {
+      const reasonText =
+        reason instanceof Buffer
+          ? reason.toString("utf8")
+          : String(reason || "");
+
+      console.error(
+        "[AIS] WebSocket CLOSE:",
+        JSON.stringify({
+          code,
+          reason: reasonText
+        })
+      );
+
+      if (!liveState.connected) {
+        liveState.lastError =
+          `AISStream closed (code=${code}, reason=${reasonText || "none"})`;
+        broadcast();
       }
 
-      try {
-        handleMessage(JSON.parse(raw));
-      } catch {
-        // ignore malformed frames
-      }
-    };
-    ws.onerror = () => {
-      liveState.lastError = "AISStream 연결 오류";
-      broadcast();
-    };
-    ws.onclose = () => {
       scheduleReconnect();
-    };
+    });
+
   } catch (err) {
-    liveState.lastError = err.message || "AISStream 연결 실패";
+    console.error(
+      "[AIS] WebSocket constructor ERROR:",
+      err?.message || err
+    );
+
+    liveState.lastError =
+      err?.message || "AISStream connection failed";
+
     broadcast();
     scheduleReconnect();
   }
 }
-
 function applyWatchlist(next) {
   watchlist = Array.isArray(next) ? next : [];
   if (config.apiKey) {
