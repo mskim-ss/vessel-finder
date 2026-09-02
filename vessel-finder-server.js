@@ -1,6 +1,7 @@
 const http = require("http");
 const fs = require("fs");
 const path = require("path");
+const WebSocket = require("ws");
 
 const PORT = Number(process.env.PORT || 3000);
 const ROOT = __dirname;
@@ -187,7 +188,9 @@ function connectStream() {
   broadcast();
 
   try {
-    ws = new WebSocket("wss://stream.aisstream.io/v0/stream");
+    ws = new WebSocket("wss://stream.aisstream.io/v0/stream", {
+      perMessageDeflate: true
+    });
     ws.onopen = () => {
       reconnectDelay = 1000;
       ws.send(JSON.stringify(buildSubscription()));

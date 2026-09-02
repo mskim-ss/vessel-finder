@@ -5,5 +5,8 @@
   "type": "commonjs",
   "scripts": {
     "start": "node vessel-finder-server.js"
+  },
+  "dependencies": {
+    "ws": "^8.18.0"
   }
 }
