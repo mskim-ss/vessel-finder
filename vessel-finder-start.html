@@ -255,6 +255,7 @@
     .modal-backdrop {
       position: fixed;
       inset: 0;
+      z-index: 10000;
       background: rgba(2, 8, 16, 0.72);
       display: none;
       align-items: center;
@@ -263,6 +264,8 @@
     }
 
     .modal {
+      position: relative;
+      z-index: 10001;
       width: min(720px, 100%);
       background: linear-gradient(180deg, #11253d, #0c1726);
       border: 1px solid var(--line);
