@@ -774,32 +774,86 @@
       render();
     };
 
-    const syncWatchlist = async () => {
-      if (!serverAvailable) return;
+    const syncWatchlist = async (force = false) => {
+      if (!serverAvailable) return false;
+
       const ships = readShips();
-      const watchlist = ships.map((ship) => {
-        const lookup = vesselLookup[ship.name.toUpperCase()] || {};
-        return {
-          id: ship.id,
-          name: ship.name,
-          mmsi: String(ship.mmsi || lookup.mmsi || ""),
-          imo: String(ship.imo || lookup.imo || ""),
-          etd: ship.etd,
-          eta: ship.eta
-        };
-      }).filter((ship) => ship.mmsi || ship.imo);
+
+      const watchlist = ships
+        .map((ship) => {
+          const lookup =
+            vesselLookup[ship.name.toUpperCase()] || {};
+
+          return {
+            id: ship.id,
+            name: ship.name,
+            mmsi: String(
+              ship.mmsi ||
+              lookup.mmsi ||
+              ""
+            ),
+            imo: String(
+              ship.imo ||
+              lookup.imo ||
+              ""
+            ),
+            etd: ship.etd,
+            eta: ship.eta
+          };
+        })
+        .filter(
+          (ship) => ship.mmsi || ship.imo
+        );
 
       const signature = JSON.stringify(watchlist);
-      if (signature === lastWatchlistSignature) return;
-      lastWatchlistSignature = signature;
+
+      /*
+       * 이미 성공적으로 전송한 동일 목록이면 생략합니다.
+       * 단, force=true이면 다시 서버에 전달합니다.
+       */
+      if (
+        !force &&
+        signature === lastWatchlistSignature
+      ) {
+        return true;
+      }
 
       try {
         await httpJson("/api/watchlist", {
           method: "POST",
-          body: JSON.stringify({ ships: watchlist })
+          body: JSON.stringify({
+            ships: watchlist
+          })
         });
+
+        /*
+         * 중요:
+         * 서버 전송이 성공한 뒤에만 signature를 기록합니다.
+         * 기존 코드는 요청 전에 기록해서 첫 실패 후
+         * 재시도가 막히는 문제가 있었습니다.
+         */
+        lastWatchlistSignature = signature;
+
+        console.log(
+          "Watchlist synced:",
+          watchlist.map(
+            (ship) =>
+              `${ship.name} (${ship.mmsi || "no MMSI"})`
+          )
+        );
+
+        return true;
       } catch (err) {
-        console.warn("Watchlist sync failed", err);
+        /*
+         * 실패하면 signature를 기록하지 않습니다.
+         * 다음 syncWatchlist() 호출에서 자동 재시도됩니다.
+         */
+        console.warn(
+          "Watchlist sync failed:",
+          err
+        );
+
+        return false;
       }
     };
 
@@ -1183,7 +1237,7 @@
       }
       liveSaveState.textContent = "";
       connectEventStream();
-      await syncWatchlist();
+      await syncWatchlist(true);
       await refreshLive();
       window.setInterval(refreshLive, 60000);
     };
