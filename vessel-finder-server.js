@@ -22,12 +22,26 @@ let reconnectTimer = null;
 let reconnectDelay = 1000;
 const sseClients = new Set();
 
+console.log(
+  "AISStream API key:",
+  process.env.AISSTREAM_API_KEY ? "Environment variable present" : "Environment variable missing"
+);
+
 function loadConfig() {
+  const envApiKey = String(process.env.AISSTREAM_API_KEY || "").trim();
+
   try {
     const raw = fs.readFileSync(CONFIG_PATH, "utf8");
-    return JSON.parse(raw);
+    const fileConfig = JSON.parse(raw);
+
+    return {
+      ...fileConfig,
+      apiKey: envApiKey || String(fileConfig.apiKey || "").trim()
+    };
   } catch {
-    return { apiKey: "" };
+    return {
+      apiKey: envApiKey
+    };
   }
 }
 
