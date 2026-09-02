@@ -712,7 +712,7 @@
       localStorage.setItem(storageKey, JSON.stringify(ships.map(normalizeShip)));
     };
 
-    const rows = document.getElementById("vesselRows");
+    const cards = document.getElementById("vesselCards");
     const activeCount = document.getElementById("activeCount");
     const todayValue = document.getElementById("todayValue");
     const liveBadge = document.getElementById("liveBadge");
@@ -1514,7 +1514,7 @@
       fillMmsiFromName();
     });
 
-    rows.addEventListener("click", (e) => {
+    cards.addEventListener("click", (e) => {
       const editId = e.target?.dataset?.edit;
       const deleteId = e.target?.dataset?.delete;
       if (editId) {
