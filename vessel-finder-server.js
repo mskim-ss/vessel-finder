@@ -164,12 +164,40 @@ function handleMessage(msg) {
   if (!mmsi || !trackedMmsi().includes(mmsi)) return;
 
   const current = liveState.vessels[mmsi] || {};
-  const latitude = typeof meta.Latitude === "number" ? meta.Latitude : current.latitude;
-  const longitude = typeof meta.Longitude === "number" ? meta.Longitude : current.longitude;
-  const sog = typeof message?.PositionReport?.Sog === "number" ? message.PositionReport.Sog : current.sog;
-  const cog = typeof message?.PositionReport?.Cog === "number" ? message.PositionReport.Cog : current.cog;
-  const heading = typeof message?.PositionReport?.TrueHeading === "number" ? message.PositionReport.TrueHeading : current.heading;
-  const shipName = meta.ShipName || current.shipName || "";
+
+  const positionReport = message?.PositionReport || {};
+
+  const latitude =
+    typeof meta.Latitude === "number"
+      ? meta.Latitude
+      : typeof positionReport.Latitude === "number"
+        ? positionReport.Latitude
+        : current.latitude;
+
+  const longitude =
+    typeof meta.Longitude === "number"
+      ? meta.Longitude
+      : typeof positionReport.Longitude === "number"
+        ? positionReport.Longitude
+        : current.longitude;
+
+  const sog =
+    typeof positionReport.Sog === "number"
+      ? positionReport.Sog
+      : current.sog;
+
+  const cog =
+    typeof positionReport.Cog === "number"
+      ? positionReport.Cog
+      : current.cog;
+
+  const heading =
+    typeof positionReport.TrueHeading === "number"
+      ? positionReport.TrueHeading
+      : current.heading;
+
+  const shipName =
+    meta.ShipName || current.shipName || "";
 
   liveState.vessels[mmsi] = {
     mmsi,
