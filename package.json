@@ -1,0 +1,9 @@
+{
+  "name": "vessel-finder",
+  "version": "1.0.0",
+  "private": true,
+  "type": "commonjs",
+  "scripts": {
+    "start": "node vessel-finder-server.js"
+  }
+}

@@ -1,0 +1,1196 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Vessel Finder</title>
+  <style>
+    :root {
+      --bg: #07111f;
+      --panel: #0d1b2c;
+      --panel-2: #10243b;
+      --line: rgba(255,255,255,0.10);
+      --text: #eaf2ff;
+      --muted: #95a8c4;
+      --accent: #68d1c6;
+      --accent-2: #f2c46d;
+      --danger: #ff8e7a;
+      --ok: #8be1a9;
+      --shadow: 0 24px 80px rgba(0,0,0,0.38);
+      --radius: 12px;
+    }
+
+    * { box-sizing: border-box; }
+    html, body { margin: 0; min-height: 100%; background:
+      radial-gradient(900px 500px at 10% 0%, rgba(104, 209, 198, 0.18), transparent 60%),
+      radial-gradient(700px 420px at 100% 0%, rgba(242, 196, 109, 0.14), transparent 58%),
+      linear-gradient(180deg, #08111d 0%, #07111f 100%);
+      color: var(--text);
+      font-family: "Noto Sans KR", "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
+      letter-spacing: 0;
+    }
+
+    body { padding: 28px; }
+
+    .shell {
+      max-width: 1180px;
+      margin: 0 auto;
+    }
+
+    .hero {
+      display: grid;
+      grid-template-columns: 1.3fr 0.9fr;
+      gap: 18px;
+      align-items: stretch;
+      margin-bottom: 18px;
+    }
+
+    .panel {
+      background: linear-gradient(180deg, rgba(16, 36, 59, 0.96), rgba(13, 27, 44, 0.98));
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      overflow: hidden;
+    }
+
+    .hero-main {
+      padding: 28px;
+      position: relative;
+      min-height: 260px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      gap: 20px;
+    }
+
+    .eyebrow {
+      text-transform: uppercase;
+      letter-spacing: 0.18em;
+      color: var(--muted);
+      font-size: 12px;
+      margin-bottom: 10px;
+    }
+
+    h1 {
+      margin: 0;
+      font-size: clamp(30px, 4vw, 52px);
+      line-height: 1.03;
+      font-weight: 700;
+    }
+
+    .lede {
+      margin: 14px 0 0;
+      color: #c6d5ea;
+      max-width: 56ch;
+      font-size: 16px;
+      line-height: 1.6;
+    }
+
+    .actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      margin-top: 10px;
+    }
+
+    .action {
+      appearance: none;
+      border: 1px solid transparent;
+      border-radius: 999px;
+      padding: 14px 18px;
+      min-height: 52px;
+      color: var(--text);
+      font: inherit;
+      font-weight: 700;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      transition: transform 0.14s ease, border-color 0.14s ease, background 0.14s ease;
+      text-decoration: none;
+    }
+
+    .action:hover { transform: translateY(-1px); }
+    .action:active { transform: translateY(0); }
+
+    .action.primary {
+      background: linear-gradient(180deg, rgba(104, 209, 198, 0.95), rgba(67, 179, 170, 0.95));
+      color: #042028;
+    }
+
+    .action.secondary {
+      background: rgba(255,255,255,0.03);
+      border-color: rgba(255,255,255,0.14);
+    }
+
+    .action .icon {
+      width: 18px;
+      height: 18px;
+      flex: 0 0 18px;
+    }
+
+    .hero-side {
+      padding: 22px;
+      display: grid;
+      gap: 12px;
+      align-content: start;
+    }
+
+    .mini {
+      background: rgba(255,255,255,0.03);
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      padding: 14px;
+    }
+
+    .mini .label {
+      color: var(--muted);
+      font-size: 12px;
+      margin-bottom: 8px;
+    }
+
+    .mini .value {
+      font-size: 22px;
+      font-weight: 700;
+    }
+
+    .mini .sub {
+      color: #c3d2e7;
+      font-size: 13px;
+      line-height: 1.5;
+      margin-top: 6px;
+    }
+
+    .live-status {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      flex-wrap: wrap;
+      margin-top: 8px;
+    }
+
+    .section {
+      margin-top: 18px;
+      padding: 20px;
+    }
+
+    .section-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 14px;
+      flex-wrap: wrap;
+    }
+
+    .section-head h2 {
+      margin: 0;
+      font-size: 18px;
+    }
+
+    .hint {
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      overflow: hidden;
+      border-radius: 10px;
+    }
+
+    thead th {
+      text-align: left;
+      font-size: 12px;
+      color: var(--muted);
+      font-weight: 600;
+      padding: 14px 12px;
+      border-bottom: 1px solid var(--line);
+      background: rgba(255,255,255,0.02);
+    }
+
+    tbody td {
+      padding: 14px 12px;
+      vertical-align: top;
+      border-bottom: 1px solid rgba(255,255,255,0.07);
+      color: #e7eef9;
+      font-size: 14px;
+      line-height: 1.45;
+    }
+
+    tbody tr:hover {
+      background: rgba(255,255,255,0.02);
+    }
+
+    .ship-name {
+      font-weight: 700;
+      display: block;
+    }
+
+    .meta {
+      color: var(--muted);
+      font-size: 12px;
+      margin-top: 4px;
+    }
+
+    .pill {
+      display: inline-flex;
+      align-items: center;
+      border-radius: 999px;
+      padding: 6px 10px;
+      font-size: 12px;
+      font-weight: 700;
+      white-space: nowrap;
+    }
+
+    .pill.ok { background: rgba(139, 225, 169, 0.14); color: var(--ok); }
+    .pill.warn { background: rgba(255, 142, 122, 0.14); color: var(--danger); }
+    .pill.wait { background: rgba(242, 196, 109, 0.14); color: var(--accent-2); }
+
+    .note {
+      color: #c6d5ea;
+    }
+
+    .modal-backdrop {
+      position: fixed;
+      inset: 0;
+      background: rgba(2, 8, 16, 0.72);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 18px;
+    }
+
+    .modal {
+      width: min(720px, 100%);
+      background: linear-gradient(180deg, #11253d, #0c1726);
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      box-shadow: var(--shadow);
+      padding: 20px;
+    }
+
+    .modal h3 {
+      margin: 0 0 14px;
+      font-size: 20px;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 12px;
+    }
+
+    .field-inline {
+      display: flex;
+      gap: 10px;
+      align-items: end;
+    }
+
+    .field-inline > label {
+      flex: 1 1 auto;
+    }
+
+    label {
+      display: grid;
+      gap: 6px;
+      font-size: 12px;
+      color: var(--muted);
+    }
+
+    input, textarea {
+      width: 100%;
+      border-radius: 10px;
+      border: 1px solid rgba(255,255,255,0.12);
+      background: rgba(255,255,255,0.04);
+      color: var(--text);
+      padding: 12px 12px;
+      font: inherit;
+      outline: none;
+    }
+
+    textarea {
+      min-height: 90px;
+      resize: vertical;
+    }
+
+    .modal-actions {
+      display: flex;
+      justify-content: flex-end;
+      gap: 10px;
+      margin-top: 14px;
+      flex-wrap: wrap;
+    }
+
+    .row-actions {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      margin-top: 8px;
+    }
+
+    .tiny {
+      min-height: 34px;
+      padding: 8px 12px;
+      font-size: 12px;
+      border-radius: 999px;
+    }
+
+    .subgrid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 12px;
+      margin-top: 12px;
+    }
+
+    .idgrid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 12px;
+      margin-top: 12px;
+    }
+
+    .subgrid label {
+      min-width: 0;
+    }
+
+    .footer {
+      margin-top: 14px;
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.6;
+    }
+
+    @media (max-width: 920px) {
+      .hero { grid-template-columns: 1fr; }
+      .grid { grid-template-columns: 1fr; }
+    }
+
+    @media (max-width: 720px) {
+      body { padding: 14px; }
+      .hero-main, .hero-side, .section { padding: 18px; }
+      table, thead, tbody, th, td, tr { display: block; }
+      thead { display: none; }
+      tbody tr {
+        border: 1px solid rgba(255,255,255,0.08);
+        border-radius: 12px;
+        margin-bottom: 12px;
+        overflow: hidden;
+      }
+      tbody td {
+        border-bottom: 1px solid rgba(255,255,255,0.07);
+        padding: 12px;
+      }
+      tbody td:last-child { border-bottom: 0; }
+    }
+  </style>
+</head>
+<body>
+  <main class="shell">
+    <section class="hero">
+      <div class="panel hero-main">
+        <div>
+          <div class="eyebrow">Vessel Finder</div>
+          <h1>오늘 바로 보는 선박 동향과 빠른 추가</h1>
+          <p class="lede">접속하면 먼저 오늘 기준으로 움직이는 배를 보고, 필요한 선박은 바로 추가할 수 있게 만든 시작 화면입니다. 호치민 도착 전 선박만 남겨서 확인해도 되고, 전체 흐름을 한 번에 볼 수도 있습니다.</p>
+        </div>
+        <div class="actions">
+          <button class="action primary" id="showTrend">
+            <svg class="icon" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M4 16l5-5 4 4 7-8" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"/><path d="M20 7v4h-4" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            오늘 기준 선박 동향
+          </button>
+          <button class="action secondary" id="openAdd">
+            <svg class="icon" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 5v14M5 12h14" stroke="currentColor" stroke-width="2.3" stroke-linecap="round"/></svg>
+            선박 추가
+          </button>
+          <button class="action secondary" id="openLive">
+            <svg class="icon" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 3v4M12 17v4M4.2 4.2l2.8 2.8M17 17l2.8 2.8M3 12h4M17 12h4M4.2 19.8l2.8-2.8M17 7l2.8-2.8" stroke="currentColor" stroke-width="2.1" stroke-linecap="round"/></svg>
+            실시간 연결
+          </button>
+        </div>
+      </div>
+      <aside class="panel hero-side">
+        <div class="mini">
+          <div class="label">오늘 기준</div>
+          <div class="value" id="todayValue">2026-09-02</div>
+          <div class="sub">현재 추적 중인 선박의 공개 위치와 ETA를 기준으로 상태를 보여줍니다.</div>
+          <div class="live-status">
+            <span class="pill wait" id="liveBadge">연결 전</span>
+            <span class="hint" id="liveHint">AISStream API 키를 저장하면 실시간 연결을 시도합니다.</span>
+          </div>
+        </div>
+        <div class="mini">
+          <div class="label">호치민 미도착</div>
+          <div class="value" id="activeCount">1척</div>
+          <div class="sub">지금은 HAIAN ROSE가 핵심 추적 대상입니다.</div>
+        </div>
+      </aside>
+    </section>
+
+    <section class="panel section" id="trendSection">
+      <div class="section-head">
+        <h2>오늘의 선박 동향</h2>
+        <div class="hint">호치민 도착 전 선박 중심으로 보이게 정리</div>
+      </div>
+      <table>
+        <thead>
+          <tr>
+            <th>상태</th>
+            <th>선명</th>
+            <th>ETD</th>
+            <th>ETA</th>
+            <th>현재 위치</th>
+            <th>특이사항</th>
+            <th>중요 내용</th>
+          </tr>
+        </thead>
+        <tbody id="vesselRows"></tbody>
+      </table>
+      <div class="footer">표는 공개 AIS와 항만 일정 스냅샷을 반영한 시작안입니다. 실제 운영에서는 선사와 항만 공지에 따라 자동 갱신되게 붙이면 더 편합니다.</div>
+    </section>
+  </main>
+
+  <div class="modal-backdrop" id="modal">
+    <div class="modal">
+      <h3>선박 추가</h3>
+      <div class="grid">
+        <div class="field-inline" style="grid-column: 1 / -1;">
+          <label>선명
+            <input id="name" placeholder="예: HAIAN ROSE" />
+          </label>
+          <button class="action secondary" id="lookupShip" type="button" style="min-height:46px; padding: 12px 16px;">
+            <svg class="icon" viewBox="0 0 24 24" fill="none" aria-hidden="true"><circle cx="11" cy="11" r="7" stroke="currentColor" stroke-width="2.2"/><path d="M20 20l-3.5-3.5" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg>
+            검색해서 채우기
+          </button>
+        </div>
+        <label>ETD
+          <input id="etd" placeholder="예: 2026-09-08" />
+        </label>
+        <label>ETA
+          <input id="eta" placeholder="예: 2026-09-13" />
+        </label>
+        <label>현재 위치
+          <input id="position" placeholder="검색 후 자동 입력" />
+        </label>
+      </div>
+      <div class="subgrid">
+        <label>공급선
+          <input id="carrier" placeholder="예: HAIAN, Dongjin, Sinokor" />
+        </label>
+        <label>인코텀즈
+          <input id="incoterms" placeholder="예: FOB, CIF, CFR" />
+        </label>
+        <label>선적 품목
+          <input id="cargo" placeholder="예: 전자부품, 섬유, 기계류" />
+        </label>
+        <label>MMSI
+          <input id="mmsi" placeholder="예: 574005800" />
+          <div class="live-status" style="margin-top:8px;">
+            <button class="action secondary tiny" id="lookupLiveLocation" type="button">현재 위치 불러오기</button>
+            <span class="hint" id="mmsiHint">MMSI를 넣으면 실시간 위치를 자동 조회합니다.</span>
+          </div>
+        </label>
+        <label>IMO
+          <input id="imo" placeholder="예: 9444962" />
+        </label>
+      </div>
+      <label style="margin-top:12px;">특이사항
+        <textarea id="remark" placeholder="검색 후 자동 입력"></textarea>
+      </label>
+      <div class="modal-actions">
+        <button class="action secondary" id="closeAdd" type="button">닫기</button>
+        <button class="action secondary" id="deleteShip" type="button" style="display:none;">삭제</button>
+        <button class="action primary" id="saveShip" type="button">저장</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal-backdrop" id="liveModal">
+    <div class="modal">
+      <h3>실시간 연결</h3>
+      <label>AISStream API 키
+        <input id="apiKey" placeholder="실시간 연결용 키를 입력" />
+      </label>
+      <div class="footer">브라우저가 아니라 서버를 통해 연결합니다. 키를 넣으면 공개 AIS 스트림을 구독하고, 오늘 기준 동향 버튼을 누를 때 최신 위치로 갱신합니다.</div>
+      <div class="footer" id="liveSaveState" style="color:#8be1a9; min-height: 1.4em;"></div>
+      <div class="modal-actions">
+        <button class="action secondary" id="closeLive" type="button">닫기</button>
+        <button class="action primary" id="saveLive" type="button">연결 저장</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const storageKey = "vesselFinderShips";
+    const apiKeyStorage = "vesselFinderApiKey";
+
+    const baseShips = [
+      {
+        id: "base-haian-rose",
+        status: "주의",
+        name: "HAIAN ROSE",
+        etd: "2026-09-08",
+        eta: "2026-09-13",
+        position: "중국 남부 해역, Nansha 접근 중",
+        special: "공개 AIS는 아직 Nansha 구간을 보여줌",
+        important: "호치민 도착 전",
+        tag: "warn",
+        mmsi: "574005800",
+        imo: "9444962"
+      }
+    ];
+
+    const vesselLookup = {
+      "HAIAN ROSE": {
+        position: "중국 남부 해역, Nansha 접근 중",
+        remark: "공개 AIS상 Nansha 선행 경유. 호치민 도착 전 상태",
+        eta: "2026-09-13",
+        etd: "2026-09-08",
+        carrier: "HAIAN",
+        incoterms: "",
+        cargo: "",
+        mmsi: "574005800",
+        imo: "9444962"
+      },
+      "DONGJIN CONFIDENT": {
+        position: "인천행 구간으로 전환됨",
+        remark: "호치민 구간을 지난 뒤 다른 항차로 이동",
+        eta: "2026-09-13",
+        etd: "2026-09-08",
+        carrier: "DONGJIN",
+        incoterms: "",
+        cargo: "",
+        mmsi: "441424000",
+        imo: "9939266"
+      }
+    };
+
+    const initShips = () => {
+      if (!localStorage.getItem(storageKey)) {
+        saveExtraShips(baseShips);
+      }
+    };
+
+    const readShips = () => loadExtraShips();
+
+    const makeId = () => (globalThis.crypto && crypto.randomUUID ? crypto.randomUUID() : `ship_${Date.now()}_${Math.random().toString(16).slice(2)}`);
+
+    const normalizeShip = (ship) => ({
+      id: ship.id || makeId(),
+      status: ship.status || "확인 필요",
+      name: ship.name || "확인 불가",
+      etd: ship.etd || "확인 불가",
+      eta: ship.eta || "확인 불가",
+      position: ship.position || "확인 불가",
+      special: ship.special || "확인 필요",
+      important: ship.important || "추가된 선박",
+      tag: ship.tag || "wait",
+      carrier: ship.carrier || "",
+      incoterms: ship.incoterms || "",
+      cargo: ship.cargo || "",
+      mmsi: ship.mmsi || "",
+      imo: ship.imo || ""
+    });
+
+    const loadExtraShips = () => {
+      try {
+        const raw = localStorage.getItem(storageKey);
+        const parsed = raw ? JSON.parse(raw) : [];
+        const normalized = parsed.map(normalizeShip);
+        if (JSON.stringify(parsed) !== JSON.stringify(normalized)) {
+          localStorage.setItem(storageKey, JSON.stringify(normalized));
+        }
+        return normalized;
+      } catch {
+        return [];
+      }
+    };
+
+    const saveExtraShips = (ships) => {
+      localStorage.setItem(storageKey, JSON.stringify(ships.map(normalizeShip)));
+    };
+
+    const rows = document.getElementById("vesselRows");
+    const activeCount = document.getElementById("activeCount");
+    const todayValue = document.getElementById("todayValue");
+    const liveBadge = document.getElementById("liveBadge");
+    const liveHint = document.getElementById("liveHint");
+    const modal = document.getElementById("modal");
+    const liveModal = document.getElementById("liveModal");
+    const deleteBtn = document.getElementById("deleteShip");
+    const saveBtn = document.getElementById("saveShip");
+    const modalTitle = document.querySelector(".modal h3");
+    const apiKeyInput = document.getElementById("apiKey");
+    const openLiveBtn = document.getElementById("openLive");
+    const closeLiveBtn = document.getElementById("closeLive");
+    const saveLiveBtn = document.getElementById("saveLive");
+    const liveTitle = liveModal.querySelector(".modal h3");
+    const lookupLiveLocationBtn = document.getElementById("lookupLiveLocation");
+    const mmsiHint = document.getElementById("mmsiHint");
+    const liveSaveState = document.getElementById("liveSaveState");
+
+    let editingId = null;
+    let lastWatchlistSignature = "";
+    let liveState = {
+      connected: false,
+      enabled: false,
+      lastError: "",
+      updatedAt: null,
+      vessels: {}
+    };
+    let serverHasApiKey = false;
+    let serverAvailable = true;
+    let eventSource = null;
+
+    const apiBase = window.location.protocol === "file:" || window.location.origin === "null" ? "http://127.0.0.1:3000" : window.location.origin;
+    const httpJson = async (path, options = {}) => {
+      const res = await fetch(`${apiBase}${path}`, {
+        headers: {
+          "Content-Type": "application/json",
+          ...(options.headers || {})
+        },
+        ...options
+      });
+      if (!res.ok) {
+        throw new Error(`HTTP ${res.status}`);
+      }
+      return res.json();
+    };
+
+    const currentApiKey = () => localStorage.getItem(apiKeyStorage) || "";
+
+    const fetchVesselByMmsi = async (mmsi) => {
+      const key = String(mmsi || "").trim();
+      if (!key) return null;
+      const response = await httpJson(`/api/vessel/${encodeURIComponent(key)}`);
+      return response.vessel || null;
+    };
+
+    const fetchVesselByName = async (name) => {
+      const key = String(name || "").trim();
+      if (!key) return null;
+      const response = await httpJson(`/api/vessel-name/${encodeURIComponent(key)}`);
+      return response.vessel || null;
+    };
+
+    const saveApiKey = async (value) => {
+      const trimmed = value.trim();
+      if (!trimmed) {
+        localStorage.removeItem(apiKeyStorage);
+        if (serverAvailable) {
+          await httpJson("/api/config", {
+            method: "POST",
+            body: JSON.stringify({ apiKey: "" })
+          });
+        }
+        serverHasApiKey = false;
+        await refreshLive();
+        return { mode: "cleared" };
+      }
+
+      localStorage.setItem(apiKeyStorage, trimmed);
+      if (!serverAvailable) {
+        serverHasApiKey = false;
+        liveSaveState.textContent = "로컬에만 저장됨. 현재 열기 방식에서는 서버 연결을 시도할 수 없습니다.";
+        return { mode: "local" };
+      }
+      liveSaveState.textContent = "서버에 저장하는 중...";
+      saveLiveBtn.disabled = true;
+      saveLiveBtn.textContent = "저장 중...";
+      await httpJson("/api/config", {
+        method: "POST",
+        body: JSON.stringify({ apiKey: trimmed })
+      });
+      serverHasApiKey = true;
+      await refreshLive();
+      return { mode: "server" };
+    };
+
+    const formatClock = (ts) => {
+      if (!ts) return "확인 전";
+      const d = new Date(ts);
+      return d.toLocaleString("ko-KR", { hour12: false, month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit" });
+    };
+
+    const coordsText = (value, digits) => {
+      if (typeof value !== "number" || Number.isNaN(value)) return "";
+      return value.toFixed(digits);
+    };
+
+    const normalizeLiveVessel = (entry) => {
+      if (!entry) return null;
+      const lat = typeof entry.latitude === "number" ? entry.latitude : null;
+      const lon = typeof entry.longitude === "number" ? entry.longitude : null;
+      return {
+        mmsi: String(entry.mmsi || ""),
+        shipName: entry.shipName || "",
+        latitude: lat,
+        longitude: lon,
+        sog: typeof entry.sog === "number" ? entry.sog : null,
+        cog: typeof entry.cog === "number" ? entry.cog : null,
+        heading: typeof entry.heading === "number" ? entry.heading : null,
+        receivedAt: entry.receivedAt || null,
+        messageType: entry.messageType || "",
+        source: entry.source || "AISStream"
+      };
+    };
+
+    const liveByKey = (ship) => {
+      const mmsi = String(ship.mmsi || vesselLookup[ship.name]?.mmsi || "");
+      if (mmsi && liveState.vessels[mmsi]) return liveState.vessels[mmsi];
+      const nameMatch = Object.values(liveState.vessels).find((v) => v.shipName && v.shipName.toUpperCase() === ship.name.toUpperCase());
+      return nameMatch || null;
+    };
+
+    const updateLiveBadge = () => {
+      if (!liveState.enabled) {
+        liveBadge.textContent = serverHasApiKey ? "연결 전" : "대기";
+        liveBadge.className = "pill wait";
+        liveHint.textContent = serverHasApiKey ? "키는 서버에 저장됐지만 아직 AIS 연결이 확인되지 않았습니다." : "AISStream API 키를 저장하면 실시간 연결을 시도합니다.";
+        return;
+      }
+      if (liveState.connected) {
+        liveBadge.textContent = "실시간 연결";
+        liveBadge.className = "pill ok";
+        liveHint.textContent = liveState.updatedAt ? `마지막 수신 ${formatClock(liveState.updatedAt)}` : "AIS 메시지를 기다리는 중입니다.";
+        return;
+      }
+      liveBadge.textContent = "연결 중";
+      liveBadge.className = "pill wait";
+      liveHint.textContent = liveState.lastError || "실시간 스트림에 연결하고 있습니다.";
+    };
+
+    const setLiveState = (next) => {
+      liveState = {
+        ...liveState,
+        ...next,
+        vessels: {
+          ...liveState.vessels,
+          ...(next.vessels || {})
+        }
+      };
+      updateLiveBadge();
+      render();
+    };
+
+    const syncWatchlist = async () => {
+      if (!serverAvailable) return;
+      const ships = readShips();
+      const watchlist = ships.map((ship) => {
+        const lookup = vesselLookup[ship.name.toUpperCase()] || {};
+        return {
+          id: ship.id,
+          name: ship.name,
+          mmsi: String(ship.mmsi || lookup.mmsi || ""),
+          imo: String(ship.imo || lookup.imo || ""),
+          etd: ship.etd,
+          eta: ship.eta
+        };
+      }).filter((ship) => ship.mmsi || ship.imo);
+
+      const signature = JSON.stringify(watchlist);
+      if (signature === lastWatchlistSignature) return;
+      lastWatchlistSignature = signature;
+
+      try {
+        await httpJson("/api/watchlist", {
+          method: "POST",
+          body: JSON.stringify({ ships: watchlist })
+        });
+      } catch (err) {
+        console.warn("Watchlist sync failed", err);
+      }
+    };
+
+    const refreshLive = async () => {
+      if (!serverAvailable) {
+        setLiveState({
+          enabled: false,
+          connected: false,
+          lastError: "현재 열기 방식에서는 서버 연결을 사용할 수 없습니다.",
+          vessels: {}
+        });
+        return;
+      }
+      try {
+        const status = await httpJson("/api/live-status");
+        const vessels = {};
+        Object.entries(status.vessels || {}).forEach(([mmsi, vessel]) => {
+          vessels[mmsi] = normalizeLiveVessel({ ...vessel, mmsi });
+        });
+        setLiveState({
+          enabled: Boolean(status.enabled),
+          connected: Boolean(status.connected),
+          lastError: status.lastError || "",
+          updatedAt: status.updatedAt || null,
+          vessels
+        });
+      } catch (err) {
+        setLiveState({
+          enabled: false,
+          connected: false,
+          lastError: "서버 실시간 상태를 불러오지 못했습니다."
+        });
+      }
+    };
+
+    const connectEventStream = () => {
+      if (!serverAvailable || !window.EventSource || location.protocol === "file:") return;
+      if (eventSource) eventSource.close();
+      eventSource = new EventSource(`${apiBase}/api/stream`);
+      eventSource.onmessage = (event) => {
+        try {
+          const payload = JSON.parse(event.data);
+          if (payload.type === "status") {
+            setLiveState({
+              enabled: Boolean(payload.enabled),
+              connected: Boolean(payload.connected),
+              lastError: payload.lastError || "",
+              updatedAt: payload.updatedAt || null,
+              vessels: payload.vessels || {}
+            });
+          }
+        } catch (err) {
+          console.warn("Stream parse error", err);
+        }
+      };
+      eventSource.onerror = () => {
+        liveState.connected = false;
+        updateLiveBadge();
+      };
+    };
+
+    function render() {
+      initShips();
+      const ships = readShips();
+      activeCount.textContent = `${ships.length}척`;
+      rows.innerHTML = ships.map(ship => `
+        <tr>
+          <td><span class="pill ${liveByKey(ship) ? "ok" : ship.tag}">${liveByKey(ship) ? "실시간" : ship.status}</span></td>
+          <td>
+            <span class="ship-name">${ship.name}</span>
+            <div class="meta">${ship.name === "HAIAN ROSE" ? "기등록 선박" : "호치민 도착 전 추적 대상"}</div>
+            ${ship.id ? `<div class="row-actions">
+              <button class="action secondary tiny" data-edit="${ship.id}" type="button">수정</button>
+              <button class="action secondary tiny" data-delete="${ship.id}" type="button">삭제</button>
+            </div>` : ""}
+          </td>
+          <td>${ship.etd}</td>
+          <td>${ship.eta}</td>
+          <td>${(() => {
+            const live = liveByKey(ship);
+            if (!live) return ship.position;
+            const lat = coordsText(live.latitude, 4);
+            const lon = coordsText(live.longitude, 4);
+            const liveLine = lat && lon ? `${lat}, ${lon}` : "실시간 좌표 확인 중";
+            return `${liveLine}<div class="meta">${live.sog !== null ? `SOG ${coordsText(live.sog, 1)} kn` : "속력 확인 중"}${live.cog !== null ? ` · COG ${coordsText(live.cog, 0)}°` : ""}${live.receivedAt ? ` · ${formatClock(live.receivedAt)}` : ""}</div>`;
+          })()}</td>
+          <td class="note">${(() => {
+            const live = liveByKey(ship);
+            const pieces = [ship.special];
+            if (live) {
+              pieces.push("실시간 AIS 반영");
+              if (live.receivedAt) pieces.push(`수신 ${formatClock(live.receivedAt)}`);
+            }
+            return pieces.filter(Boolean).join(" · ") + `${ship.carrier || ship.incoterms || ship.cargo ? `<div class="meta">${[ship.carrier && `공급선: ${ship.carrier}`, ship.incoterms && `인코텀즈: ${ship.incoterms}`, ship.cargo && `품목: ${ship.cargo}`].filter(Boolean).join(" · ")}</div>` : ""}`;
+          })()}</td>
+          <td>${ship.important || "호치민 도착 전"}</td>
+        </tr>
+      `).join("");
+
+      syncWatchlist();
+    }
+
+    document.getElementById("openAdd").addEventListener("click", () => {
+      editingId = null;
+      modalTitle.textContent = "선박 추가";
+      deleteBtn.style.display = "none";
+      saveBtn.textContent = "저장";
+      ["name","etd","eta","position","carrier","incoterms","cargo","mmsi","imo","remark"].forEach(id => document.getElementById(id).value = "");
+      modal.style.display = "flex";
+      document.getElementById("name").focus();
+    });
+
+    document.getElementById("closeAdd").addEventListener("click", () => {
+      modal.style.display = "none";
+    });
+
+    openLiveBtn.addEventListener("click", async () => {
+      apiKeyInput.value = currentApiKey();
+      liveTitle.textContent = "실시간 연결";
+      liveModal.style.display = "flex";
+      try {
+        const status = await httpJson("/api/config");
+        if (status.hasApiKey && !apiKeyInput.value) {
+          liveHint.textContent = "서버에 API 키가 저장되어 있습니다.";
+        }
+      } catch {}
+    });
+
+    closeLiveBtn.addEventListener("click", () => {
+      liveModal.style.display = "none";
+    });
+
+    liveModal.addEventListener("click", (e) => {
+      if (e.target === liveModal) liveModal.style.display = "none";
+    });
+
+    modal.addEventListener("click", (e) => {
+      if (e.target === modal) modal.style.display = "none";
+    });
+
+    const openEditor = (ship) => {
+      editingId = ship.id;
+      modalTitle.textContent = "선박 정정";
+      deleteBtn.style.display = "inline-flex";
+      saveBtn.textContent = "정정 저장";
+      document.getElementById("name").value = ship.name || "";
+      document.getElementById("etd").value = ship.etd || "";
+      document.getElementById("eta").value = ship.eta || "";
+      document.getElementById("position").value = ship.position || "";
+      document.getElementById("carrier").value = ship.carrier || "";
+      document.getElementById("incoterms").value = ship.incoterms || "";
+      document.getElementById("cargo").value = ship.cargo || "";
+      document.getElementById("mmsi").value = ship.mmsi || "";
+      document.getElementById("imo").value = ship.imo || "";
+      document.getElementById("remark").value = ship.special || "";
+      mmsiHint.textContent = ship.mmsi ? "MMSI 기준으로 현재 위치를 다시 불러올 수 있습니다." : "MMSI를 넣으면 실시간 위치를 자동 조회합니다.";
+      modal.style.display = "flex";
+      document.getElementById("name").focus();
+    };
+
+    const saveCurrentShip = () => {
+      const name = document.getElementById("name").value.trim();
+      const etd = document.getElementById("etd").value.trim();
+      const eta = document.getElementById("eta").value.trim();
+      const position = document.getElementById("position").value.trim();
+      const carrier = document.getElementById("carrier").value.trim();
+      const incoterms = document.getElementById("incoterms").value.trim();
+      const cargo = document.getElementById("cargo").value.trim();
+      const mmsi = document.getElementById("mmsi").value.trim();
+      const imo = document.getElementById("imo").value.trim();
+      const remark = document.getElementById("remark").value.trim();
+      if (!name) return;
+
+      const lookup = vesselLookup[name.toUpperCase()] || {};
+
+      const extra = loadExtraShips();
+      const record = normalizeShip({
+        id: editingId || makeId(),
+        status: "확인 필요",
+        name,
+        etd: etd || lookup.etd || "확인 불가",
+        eta: eta || lookup.eta || "확인 불가",
+        position: position || lookup.position || "확인 불가",
+        special: remark || lookup.remark || "확인 필요",
+        important: "호치민 도착 전",
+        tag: "wait",
+        carrier: carrier || lookup.carrier || "",
+        incoterms: incoterms || lookup.incoterms || "",
+        cargo: cargo || lookup.cargo || ""
+        ,
+        mmsi: mmsi || lookup.mmsi || "",
+        imo: imo || lookup.imo || ""
+      });
+      const next = editingId
+        ? extra.map(ship => ship.id === editingId ? record : ship)
+        : [...extra, record];
+      saveExtraShips(next);
+      modal.style.display = "none";
+      render();
+    };
+
+    saveBtn.addEventListener("click", saveCurrentShip);
+
+    deleteBtn.addEventListener("click", () => {
+      if (!editingId) return;
+      const next = loadExtraShips().filter(ship => ship.id !== editingId);
+      saveExtraShips(next);
+      modal.style.display = "none";
+      editingId = null;
+      render();
+    });
+
+    document.getElementById("lookupShip").addEventListener("click", () => {
+      const name = document.getElementById("name").value.trim().toUpperCase();
+      const lookup = vesselLookup[name];
+      if (!lookup) {
+        document.getElementById("position").value = "";
+        document.getElementById("remark").value = "이 선박은 현재 내장 조회값이 없어, 채팅에서 최신 공개 정보를 먼저 확인해야 합니다.";
+      } else {
+        document.getElementById("etd").value = lookup.etd || "";
+        document.getElementById("eta").value = lookup.eta || "";
+        document.getElementById("position").value = lookup.position || "";
+        document.getElementById("carrier").value = lookup.carrier || "";
+        document.getElementById("incoterms").value = lookup.incoterms || "";
+        document.getElementById("cargo").value = lookup.cargo || "";
+        document.getElementById("mmsi").value = lookup.mmsi || "";
+        document.getElementById("imo").value = lookup.imo || "";
+        document.getElementById("remark").value = lookup.remark || "";
+      }
+      fillMmsiFromName();
+    });
+
+    const fillMmsiFromName = async () => {
+      const name = document.getElementById("name").value.trim();
+      if (!name) return;
+
+      const local = vesselLookup[name.toUpperCase()];
+      if (local?.mmsi) {
+        document.getElementById("mmsi").value = local.mmsi;
+        mmsiHint.textContent = "선명 기준으로 MMSI를 채웠습니다.";
+        fillLiveLocation();
+        return;
+      }
+
+      const saved = readShips().find((item) => item.name.trim().toUpperCase() === name.toUpperCase());
+      if (saved?.mmsi) {
+        document.getElementById("mmsi").value = saved.mmsi;
+        mmsiHint.textContent = "저장된 선박 정보에서 MMSI를 찾았습니다.";
+        fillLiveLocation();
+        return;
+      }
+
+      try {
+        const live = await fetchVesselByName(name);
+        if (live?.mmsi) {
+          document.getElementById("mmsi").value = String(live.mmsi);
+          if (!document.getElementById("position").value.trim()) {
+            const lat = typeof live.latitude === "number" ? live.latitude.toFixed(4) : "";
+            const lon = typeof live.longitude === "number" ? live.longitude.toFixed(4) : "";
+            if (lat && lon) document.getElementById("position").value = `${lat}, ${lon}`;
+          }
+          mmsiHint.textContent = "실시간 데이터에서 MMSI를 찾았습니다.";
+          fillLiveLocation();
+          return;
+        }
+      } catch {}
+
+      mmsiHint.textContent = "이 이름은 아직 자동으로 MMSI를 찾지 못했습니다.";
+    };
+
+    const fillLiveLocation = async () => {
+      const mmsi = document.getElementById("mmsi").value.trim();
+      if (!mmsi) {
+        mmsiHint.textContent = "MMSI를 먼저 넣어주세요.";
+        return;
+      }
+      try {
+        const vessel = await fetchVesselByMmsi(mmsi);
+        if (!vessel) {
+          mmsiHint.textContent = "현재 실시간 위치를 찾지 못했습니다.";
+          return;
+        }
+        const lat = typeof vessel.latitude === "number" ? vessel.latitude.toFixed(4) : "";
+        const lon = typeof vessel.longitude === "number" ? vessel.longitude.toFixed(4) : "";
+        document.getElementById("position").value = lat && lon ? `${lat}, ${lon}` : "실시간 좌표 확인 중";
+        document.getElementById("remark").value = `실시간 AIS 반영${vessel.receivedAt ? ` · 수신 ${formatClock(vessel.receivedAt)}` : ""}`;
+        if (vessel.shipName && !document.getElementById("name").value.trim()) {
+          document.getElementById("name").value = vessel.shipName;
+        }
+        if (vessel.sog !== null && vessel.sog !== undefined) {
+          mmsiHint.textContent = `현재 속력 ${vessel.sog.toFixed(1)} kn`;
+        } else {
+          mmsiHint.textContent = "현재 위치를 불러왔습니다.";
+        }
+      } catch {
+        mmsiHint.textContent = "현재 위치 조회에 실패했습니다.";
+      }
+    };
+
+    document.getElementById("saveLive").addEventListener("click", async () => {
+      const key = apiKeyInput.value.trim();
+      try {
+        const result = await saveApiKey(key);
+        if (result?.mode === "local") {
+          liveModal.style.display = "flex";
+        } else {
+          liveSaveState.textContent = "저장 완료. 연결을 확인하는 중입니다.";
+          liveModal.style.display = "none";
+        }
+      } catch (err) {
+        liveSaveState.textContent = "저장 실패. 키 형식 또는 연결을 확인해 주세요.";
+        liveHint.textContent = "API 키 저장에 실패했습니다.";
+      } finally {
+        saveLiveBtn.disabled = false;
+        saveLiveBtn.textContent = "연결 저장";
+      }
+    });
+
+    lookupLiveLocationBtn.addEventListener("click", fillLiveLocation);
+
+    document.getElementById("mmsi").addEventListener("change", () => {
+      if (document.getElementById("mmsi").value.trim()) {
+        fillLiveLocation();
+      }
+    });
+
+    document.getElementById("name").addEventListener("blur", () => {
+      fillMmsiFromName();
+    });
+
+    rows.addEventListener("click", (e) => {
+      const editId = e.target?.dataset?.edit;
+      const deleteId = e.target?.dataset?.delete;
+      if (editId) {
+        const ship = loadExtraShips().find(item => item.id === editId);
+        if (ship) openEditor(ship);
+      }
+      if (deleteId) {
+        const next = loadExtraShips().filter(item => item.id !== deleteId);
+        saveExtraShips(next);
+        render();
+      }
+    });
+
+    document.getElementById("showTrend").addEventListener("click", async () => {
+      document.getElementById("trendSection").scrollIntoView({ behavior: "smooth", block: "start" });
+      await refreshLive();
+    });
+
+    document.getElementById("openAdd").addEventListener("click", () => {
+      syncWatchlist();
+    });
+
+    const bootstrapLive = async () => {
+      const today = new Date();
+      const parts = new Intl.DateTimeFormat("ko-KR", {
+        timeZone: "Asia/Seoul",
+        year: "numeric",
+        month: "2-digit",
+        day: "2-digit"
+      }).formatToParts(today);
+      const year = parts.find((p) => p.type === "year")?.value || "";
+      const month = parts.find((p) => p.type === "month")?.value || "";
+      const day = parts.find((p) => p.type === "day")?.value || "";
+      todayValue.textContent = `${year}-${month}-${day}`;
+      try {
+        const config = await httpJson("/api/config");
+        serverAvailable = true;
+        serverHasApiKey = Boolean(config.hasApiKey);
+        setLiveState({
+          enabled: Boolean(config.hasApiKey),
+          connected: Boolean(config.connected),
+          lastError: config.lastError || "",
+          updatedAt: config.updatedAt || null,
+          vessels: config.vessels || {}
+        });
+        apiKeyInput.value = currentApiKey();
+      } catch {
+        serverAvailable = false;
+        updateLiveBadge();
+      }
+      liveSaveState.textContent = "";
+      connectEventStream();
+      await syncWatchlist();
+      await refreshLive();
+      window.setInterval(refreshLive, 60000);
+    };
+
+    initShips();
+    render();
+    bootstrapLive();
+  </script>
+</body>
+</html>
