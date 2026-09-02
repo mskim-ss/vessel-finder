@@ -387,6 +387,112 @@
   </style>
 </head>
 <body>
+
+<style id="vessel-card-style">
+  .vessel-cards {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .vessel-card {
+    width: 100%;
+    box-sizing: border-box;
+    padding: 15px;
+    border-radius: 13px;
+    border: 1px solid rgba(255,255,255,0.08);
+    background: rgba(255,255,255,0.025);
+    cursor: pointer;
+    transition:
+      border-color 0.15s ease,
+      background 0.15s ease,
+      transform 0.15s ease;
+  }
+
+  .vessel-card:hover {
+    background: rgba(255,255,255,0.045);
+    border-color: rgba(70,198,181,0.35);
+    transform: translateY(-1px);
+  }
+
+  .vessel-card.selected {
+    border-color: rgba(70,198,181,0.65);
+    background: rgba(70,198,181,0.08);
+  }
+
+  .vessel-card-top {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 10px;
+  }
+
+  .vessel-card-name {
+    font-size: 16px;
+    font-weight: 800;
+    color: #eef5ff;
+  }
+
+  .vessel-card-sub {
+    margin-top: 3px;
+    font-size: 11px;
+    color: var(--muted);
+  }
+
+  .vessel-card-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    margin-top: 10px;
+  }
+
+  .vessel-card-item {
+    padding: 8px 10px;
+    border-radius: 9px;
+    background: rgba(255,255,255,0.035);
+  }
+
+  .vessel-card-label {
+    font-size: 10px;
+    color: var(--muted);
+    margin-bottom: 3px;
+  }
+
+  .vessel-card-value {
+    font-size: 13px;
+    font-weight: 700;
+    color: #e8f0fb;
+  }
+
+  .vessel-card-route {
+    margin-top: 10px;
+    font-size: 12px;
+    color: #bfd0e5;
+    line-height: 1.45;
+  }
+
+  .vessel-card-actions {
+    display: flex;
+    gap: 7px;
+    margin-top: 11px;
+  }
+
+  .vessel-card .row-actions {
+    margin-top: 0;
+  }
+
+  #fleetSummary {
+    margin-top: 4px;
+  }
+
+  @media (max-width: 700px) {
+    .vessel-card-grid {
+      grid-template-columns: 1fr;
+    }
+  }
+</style>
+
   <main class="shell">
     <section class="hero">
       <div class="panel hero-main">
@@ -429,26 +535,21 @@
     </section>
 
     <section class="panel section" id="trendSection">
-      <div class="section-head">
-        <h2>오늘의 선박 동향</h2>
-        <div class="hint">호치민 도착 전 선박 중심으로 보이게 정리</div>
-      </div>
-      <table>
-        <thead>
-          <tr>
-            <th>상태</th>
-            <th>선명</th>
-            <th>ETD</th>
-            <th>ETA</th>
-            <th>현재 위치</th>
-            <th>특이사항</th>
-            <th>중요 내용</th>
-          </tr>
-        </thead>
-        <tbody id="vesselRows"></tbody>
-      </table>
-      <div class="footer">표는 공개 AIS와 항만 일정 스냅샷을 반영한 시작안입니다. 실제 운영에서는 선사와 항만 공지에 따라 자동 갱신되게 붙이면 더 편합니다.</div>
-    </section>
+  <div class="section-head">
+    <div>
+      <h2>추적 선박</h2>
+      <div class="hint" id="fleetSummary">추적 선박을 불러오는 중</div>
+    </div>
+    <div class="hint">선박 카드를 클릭하면 지도에서 해당 선박을 표시합니다.</div>
+  </div>
+
+  <div id="vesselCards" class="vessel-cards"></div>
+
+  <div class="footer">
+    공개 AIS와 입력한 선박 일정을 기준으로 표시합니다.
+    AIS 수신 상태와 위치는 실시간으로 갱신됩니다.
+  </div>
+</section>
   </main>
 
   <div class="modal-backdrop" id="modal">
@@ -961,41 +1062,226 @@
 
     function render() {
       initShips();
+
       const ships = readShips();
+      const cards = document.getElementById("vesselCards");
+      const summary = document.getElementById("fleetSummary");
+
+      if (!cards || !summary) {
+        return;
+      }
+
       activeCount.textContent = `${ships.length}척`;
-      rows.innerHTML = ships.map(ship => `
-        <tr>
-          <td><span class="pill ${liveByKey(ship) ? "ok" : ship.tag}">${liveByKey(ship) ? "실시간" : ship.status}</span></td>
-          <td>
-            <span class="ship-name">${ship.name}</span>
-            <div class="meta">${ship.name === "HAIAN ROSE" ? "기등록 선박" : "호치민 도착 전 추적 대상"}</div>
-            ${ship.id ? `<div class="row-actions">
-              <button class="action secondary tiny" data-edit="${ship.id}" type="button">수정</button>
-              <button class="action secondary tiny" data-delete="${ship.id}" type="button">삭제</button>
-            </div>` : ""}
-          </td>
-          <td>${ship.etd}</td>
-          <td>${ship.eta}</td>
-          <td>${(() => {
-            const live = liveByKey(ship);
-            if (!live) return ship.position;
-            const lat = coordsText(live.latitude, 4);
-            const lon = coordsText(live.longitude, 4);
-            const liveLine = lat && lon ? `${lat}, ${lon}` : "실시간 좌표 확인 중";
-            return `${liveLine}<div class="meta">${live.sog !== null ? `SOG ${coordsText(live.sog, 1)} kn` : "속력 확인 중"}${live.cog !== null ? ` · COG ${coordsText(live.cog, 0)}°` : ""}${live.receivedAt ? ` · ${formatClock(live.receivedAt)}` : ""}</div>`;
-          })()}</td>
-          <td class="note">${(() => {
-            const live = liveByKey(ship);
-            const pieces = [ship.special];
-            if (live) {
-              pieces.push("실시간 AIS 반영");
-              if (live.receivedAt) pieces.push(`수신 ${formatClock(live.receivedAt)}`);
-            }
-            return pieces.filter(Boolean).join(" · ") + `${ship.carrier || ship.incoterms || ship.cargo ? `<div class="meta">${[ship.carrier && `공급선: ${ship.carrier}`, ship.incoterms && `인코텀즈: ${ship.incoterms}`, ship.cargo && `품목: ${ship.cargo}`].filter(Boolean).join(" · ")}</div>` : ""}`;
-          })()}</td>
-          <td>${ship.important || "호치민 도착 전"}</td>
-        </tr>
-      `).join("");
+
+      const liveShips = ships.filter((ship) => liveByKey(ship));
+      summary.textContent =
+        `총 ${ships.length}척 · 실시간 AIS ${liveShips.length}척`;
+
+      if (ships.length === 0) {
+        cards.innerHTML = `
+          <div class="meta">
+            추적 중인 선박이 없습니다. 상단의 선박 추가 버튼으로 등록하세요.
+          </div>
+        `;
+        syncWatchlist();
+        return;
+      }
+
+      cards.innerHTML = ships.map((ship) => {
+        const live = liveByKey(ship);
+
+        const statusClass = live
+          ? "ok"
+          : (ship.tag || "wait");
+
+        const statusText = live
+          ? "실시간 AIS"
+          : (ship.status || "확인 필요");
+
+        const name = String(ship.name || "Unknown vessel");
+
+        const mmsi = String(
+          ship.mmsi ||
+          vesselLookup[name.toUpperCase()]?.mmsi ||
+          ""
+        );
+
+        const liveLat =
+          live && typeof live.latitude === "number"
+            ? live.latitude.toFixed(4)
+            : null;
+
+        const liveLon =
+          live && typeof live.longitude === "number"
+            ? live.longitude.toFixed(4)
+            : null;
+
+        const positionText =
+          liveLat !== null && liveLon !== null
+            ? `${liveLat}, ${liveLon}`
+            : (ship.position || "AIS 위치 대기");
+
+        const speedText =
+          live && live.sog !== null
+            ? `${Number(live.sog).toFixed(1)} kn`
+            : "-";
+
+        const courseText =
+          live && live.cog !== null
+            ? `${Number(live.cog).toFixed(0)}°`
+            : "-";
+
+        const headingText =
+          live && live.heading !== null
+            ? `${Number(live.heading).toFixed(0)}°`
+            : "-";
+
+        let aisEtaText = "-";
+        let distanceText = "-";
+
+        if (
+          live &&
+          typeof live.latitude === "number" &&
+          typeof live.longitude === "number"
+        ) {
+          const R = 6371;
+          const toRad = (v) => v * Math.PI / 180;
+
+          const lat1 = toRad(live.latitude);
+          const lat2 = toRad(10.7769);
+          const dLat = toRad(10.7769 - live.latitude);
+          const dLon = toRad(106.7009 - live.longitude);
+
+          const a =
+            Math.sin(dLat / 2) ** 2 +
+            Math.cos(lat1) *
+            Math.cos(lat2) *
+            Math.sin(dLon / 2) ** 2;
+
+          const distance =
+            R *
+            2 *
+            Math.atan2(
+              Math.sqrt(a),
+              Math.sqrt(1 - a)
+            );
+
+          distanceText =
+            `${Math.round(distance).toLocaleString("ko-KR")} km`;
+
+          const speed = Number(live.sog);
+
+          if (Number.isFinite(speed) && speed > 0) {
+            const hours =
+              distance / (speed * 1.852);
+
+            const eta =
+              Date.now() +
+              hours * 60 * 60 * 1000;
+
+            aisEtaText =
+              new Date(eta).toLocaleString(
+                "ko-KR",
+                {
+                  month: "2-digit",
+                  day: "2-digit",
+                  hour: "2-digit",
+                  minute: "2-digit"
+                }
+              );
+          }
+        }
+
+        const lastReceivedText =
+          live?.receivedAt
+            ? formatClock(live.receivedAt)
+            : "-";
+
+        const selected =
+          window.vesselFinderSelectedMmsi === mmsi
+            ? " selected"
+            : "";
+
+        return `
+          <article
+            class="vessel-card${selected}"
+            data-vessel-card="${encodeURIComponent(mmsi)}"
+          >
+            <div class="vessel-card-top">
+              <div>
+                <div class="vessel-card-name">
+                  ${escapeHtml(name.trim())}
+                </div>
+                <div class="vessel-card-sub">
+                  MMSI ${escapeHtml(mmsi || "-")}
+                  ${ship.imo ? ` · IMO ${escapeHtml(ship.imo)}` : ""}
+                </div>
+              </div>
+
+              <span class="pill ${statusClass}">
+                ${statusText}
+              </span>
+            </div>
+
+            <div class="vessel-card-grid">
+              <div class="vessel-card-item">
+                <div class="vessel-card-label">현재 속도</div>
+                <div class="vessel-card-value">
+                  ${speedText}
+                </div>
+              </div>
+
+              <div class="vessel-card-item">
+                <div class="vessel-card-label">진행 방향</div>
+                <div class="vessel-card-value">
+                  ${courseText}
+                </div>
+              </div>
+
+              <div class="vessel-card-item">
+                <div class="vessel-card-label">호치민까지</div>
+                <div class="vessel-card-value">
+                  ${distanceText}
+                </div>
+              </div>
+
+              <div class="vessel-card-item">
+                <div class="vessel-card-label">AIS 예상 ETA</div>
+                <div class="vessel-card-value">
+                  ${aisEtaText}
+                </div>
+              </div>
+            </div>
+
+            <div class="vessel-card-route">
+              현재 위치 · ${escapeHtml(positionText)}<br>
+              선수방향 · ${headingText}
+              · AIS 수신 · ${escapeHtml(lastReceivedText)}<br>
+              계획 ETA · ${escapeHtml(ship.eta || "-")}
+            </div>
+
+            <div class="vessel-card-actions">
+              ${
+                ship.id
+                  ? `
+                    <button
+                      class="action secondary tiny"
+                      data-edit="${ship.id}"
+                      type="button"
+                    >수정</button>
+
+                    <button
+                      class="action secondary tiny"
+                      data-delete="${ship.id}"
+                      type="button"
+                    >삭제</button>
+                  `
+                  : ""
+              }
+            </div>
+          </article>
+        `;
+      }).join("");
 
       syncWatchlist();
     }
@@ -1705,9 +1991,15 @@
       }
 
       /*
-       * 첫 번째 선박 정보를 요약 카드에 표시
+       * 선택된 선박 정보를 요약 카드에 표시합니다.
+       * 선택값이 없으면 첫 번째 선박을 사용합니다.
        */
-      if (mmsi === keys[0]) {
+      const selectedKey =
+        selectedMmsi && vessels[selectedMmsi]
+          ? selectedMmsi
+          : keys[0];
+
+      if (mmsi === selectedKey) {
         updateInfo(vessel);
       }
     }
@@ -1751,6 +2043,25 @@
         "AIS 상태 확인 중";
     }
   }
+
+
+  let selectedMmsi = null;
+  window.vesselFinderSelectedMmsi = null;
+
+  window.vesselFinderFocus = function (mmsi) {
+    selectedMmsi = String(mmsi || "");
+    window.vesselFinderSelectedMmsi = selectedMmsi;
+
+    const marker = vesselMarkers[selectedMmsi];
+
+    if (map && marker) {
+      map.setView(marker.getLatLng(), 7, {
+        animate: true
+      });
+
+      marker.openPopup();
+    }
+  };
 
   function start() {
     initMap();
@@ -1964,6 +2275,47 @@
 </script>
 
 <!-- VESSEL_WORKSPACE_LAYOUT_END -->
+
+<script id="vessel-card-click-script">
+(function () {
+  "use strict";
+
+  document.addEventListener("click", function (event) {
+    const card = event.target.closest("[data-vessel-card]");
+
+    if (!card) {
+      return;
+    }
+
+    if (
+      event.target.closest("[data-edit]") ||
+      event.target.closest("[data-delete]")
+    ) {
+      return;
+    }
+
+    const encoded = card.getAttribute("data-vessel-card");
+    const mmsi = decodeURIComponent(encoded || "");
+
+    if (!mmsi) {
+      return;
+    }
+
+    window.vesselFinderSelectedMmsi = mmsi;
+
+    document
+      .querySelectorAll(".vessel-card.selected")
+      .forEach((el) => el.classList.remove("selected"));
+
+    card.classList.add("selected");
+
+    if (typeof window.vesselFinderFocus === "function") {
+      window.vesselFinderFocus(mmsi);
+    }
+  });
+})();
+</script>
+
 
 </body>
 </html>
