@@ -744,32 +744,76 @@
     };
 
     const updateLiveBadge = () => {
+      const now = Date.now();
+      const lastReceived = Number(liveState.updatedAt || 0);
+      const ageMs = lastReceived
+        ? Math.max(0, now - lastReceived)
+        : Infinity;
+
+      const dataFresh = ageMs <= 60 * 1000;
+      const hasRecentData =
+        Number.isFinite(lastReceived) &&
+        lastReceived > 0;
+
       if (!liveState.enabled) {
-        liveBadge.textContent = serverHasApiKey ? "연결 전" : "대기";
+        liveBadge.textContent =
+          serverHasApiKey ? "연결 전" : "대기";
+
         liveBadge.className = "pill wait";
-        liveHint.textContent = serverHasApiKey ? "키는 서버에 저장됐지만 아직 AIS 연결이 확인되지 않았습니다." : "AISStream API 키를 저장하면 실시간 연결을 시도합니다.";
+
+        liveHint.textContent = serverHasApiKey
+          ? "키는 서버에 저장됐지만 AIS 연결을 준비하고 있습니다."
+          : "AISStream API 키를 저장하면 실시간 연결을 시도합니다.";
+
         return;
       }
-      if (liveState.connected) {
-        liveBadge.textContent = "실시간 연결";
+
+      if (liveState.connected && dataFresh) {
+        liveBadge.textContent = "실시간 AIS";
         liveBadge.className = "pill ok";
-        liveHint.textContent = liveState.updatedAt ? `마지막 수신 ${formatClock(liveState.updatedAt)}` : "AIS 메시지를 기다리는 중입니다.";
+
+        liveHint.textContent = hasRecentData
+          ? `마지막 수신 ${formatClock(lastReceived)}`
+          : "AIS 실시간 데이터를 기다리는 중입니다.";
+
         return;
       }
+
+      if (!liveState.connected && dataFresh) {
+        liveBadge.textContent = "재연결 중";
+        liveBadge.className = "pill wait";
+
+        liveHint.textContent =
+          `마지막 정상 수신 ${formatClock(lastReceived)}`;
+
+        return;
+      }
+
+      if (!liveState.connected && hasRecentData) {
+        liveBadge.textContent = "AIS 연결 끊김";
+        liveBadge.className = "pill warn";
+
+        liveHint.textContent =
+          `마지막 수신 ${formatClock(lastReceived)}`;
+
+        return;
+      }
+
       liveBadge.textContent = "연결 중";
       liveBadge.className = "pill wait";
-      liveHint.textContent = liveState.lastError || "실시간 스트림에 연결하고 있습니다.";
+
+      liveHint.textContent =
+        liveState.lastError ||
+        "AIS 실시간 연결을 시도하고 있습니다.";
     };
 
     const setLiveState = (next) => {
       liveState = {
         ...liveState,
         ...next,
-        vessels: {
-          ...liveState.vessels,
-          ...(next.vessels || {})
-        }
+        vessels: next.vessels || {}
       };
+
       updateLiveBadge();
       render();
     };
